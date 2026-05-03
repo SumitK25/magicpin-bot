@@ -1,7 +1,0 @@
-/home/ksumit/projects/magicpin-bot/bot/src/main/java/com/magicpin/bot/controller/ContextController.java
-/home/ksumit/projects/magicpin-bot/bot/src/main/java/com/magicpin/bot/repository/InMemoryStore.java
-/home/ksumit/projects/magicpin-bot/bot/src/main/java/com/magicpin/bot/controller/MetadataController.java
-/home/ksumit/projects/magicpin-bot/bot/src/main/java/com/magicpin/bot/controller/ReplyController.java
-/home/ksumit/projects/magicpin-bot/bot/src/main/java/com/magicpin/bot/controller/TickController.java
-/home/ksumit/projects/magicpin-bot/bot/src/main/java/com/magicpin/bot/controller/HealthController.java
-/home/ksumit/projects/magicpin-bot/bot/src/main/java/com/magicpin/bot/BotApplication.java

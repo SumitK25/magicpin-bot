@@ -1,7 +1,0 @@
-com/magicpin/bot/controller/TickController.class
-com/magicpin/bot/controller/ContextController.class
-com/magicpin/bot/controller/MetadataController.class
-com/magicpin/bot/repository/InMemoryStore.class
-com/magicpin/bot/BotApplication.class
-com/magicpin/bot/controller/HealthController.class
-com/magicpin/bot/controller/ReplyController.class
