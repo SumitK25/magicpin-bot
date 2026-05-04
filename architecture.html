@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>magicpin Bot — Architecture</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:        #0a0d14;
+    --surface:   #111520;
+    --border:    #1e2535;
+    --judge:     #f97316;
+    --health:    #22d3ee;
+    --meta:      #a78bfa;
+    --context:   #34d399;
+    --tick:      #f59e0b;
+    --reply:     #f472b6;
+    --store:     #60a5fa;
+    --arrow:     #4b5563;
+    --text:      #e2e8f0;
+    --muted:     #64748b;
+    --tag-bg:    rgba(255,255,255,0.05);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    padding: 40px 24px;
+    overflow-x: hidden;
+  }
+
+  /* Animated grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(30,37,53,0.6) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(30,37,53,0.6) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  /* ── Header ── */
+  .header {
+    text-align: center;
+    margin-bottom: 52px;
+    animation: fadeDown 0.6s ease both;
+  }
+  .header h1 {
+    font-size: clamp(1.6rem, 4vw, 2.8rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    background: linear-gradient(135deg, #f97316, #f59e0b, #f472b6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .header p {
+    margin-top: 8px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+  }
+
+  /* ── Section labels ── */
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+    padding-left: 4px;
+  }
+
+  /* ── Judge box ── */
+  .judge-box {
+    border: 1.5px solid var(--judge);
+    border-radius: 14px;
+    padding: 18px 24px;
+    background: rgba(249,115,22,0.06);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    animation: fadeDown 0.6s 0.1s ease both;
+    box-shadow: 0 0 32px rgba(249,115,22,0.1);
+  }
+  .judge-icon {
+    width: 44px; height: 44px;
+    border-radius: 10px;
+    background: rgba(249,115,22,0.15);
+    border: 1px solid rgba(249,115,22,0.4);
+    display: grid; place-items: center;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+  }
+  .judge-box h3 { font-size: 1rem; font-weight: 700; color: var(--judge); }
+  .judge-box p  { font-size: 0.78rem; color: var(--muted); margin-top: 2px; font-family: 'Space Mono', monospace; }
+
+  .http-badge {
+    margin-left: auto;
+    background: rgba(249,115,22,0.12);
+    border: 1px solid rgba(249,115,22,0.3);
+    color: var(--judge);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    padding: 4px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.06em;
+    flex-shrink: 0;
+  }
+
+  /* ── Connector arrow ── */
+  .connector {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    margin: 6px 0;
+    animation: fadeIn 0.5s 0.2s ease both;
+  }
+  .connector-line {
+    width: 2px;
+    height: 28px;
+    background: linear-gradient(to bottom, var(--judge), var(--arrow));
+  }
+  .connector-arrow {
+    width: 0; height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 8px solid var(--arrow);
+  }
+  .connector-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    margin-top: 4px;
+  }
+
+  /* ── Spring Boot container ── */
+  .app-container {
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 28px;
+    background: var(--surface);
+    animation: fadeUp 0.6s 0.3s ease both;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  }
+  .app-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .spring-badge {
+    background: linear-gradient(135deg,#6dd763,#34a853);
+    color: #fff;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    padding: 4px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+  }
+  .app-title h2 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.01em;
+  }
+  .port-badge {
+    margin-left: auto;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    background: var(--tag-bg);
+    border: 1px solid var(--border);
+    padding: 3px 10px;
+    border-radius: 20px;
+  }
+
+  /* ── Controller grid (top row: health + meta) ── */
+  .top-controllers {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  /* ── Controller card ── */
+  .ctrl {
+    border-radius: 12px;
+    padding: 16px 18px;
+    border: 1px solid;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .ctrl:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  .ctrl::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 12px 12px 0 0;
+  }
+
+  /* Health */
+  .ctrl-health { border-color: rgba(34,211,238,0.3); background: rgba(34,211,238,0.04); }
+  .ctrl-health::before { background: var(--health); }
+  .ctrl-health .ctrl-name { color: var(--health); }
+
+  /* Meta */
+  .ctrl-meta { border-color: rgba(167,139,250,0.3); background: rgba(167,139,250,0.04); }
+  .ctrl-meta::before { background: var(--meta); }
+  .ctrl-meta .ctrl-name { color: var(--meta); }
+
+  /* Context */
+  .ctrl-context { border-color: rgba(52,211,153,0.3); background: rgba(52,211,153,0.04); }
+  .ctrl-context::before { background: var(--context); }
+  .ctrl-context .ctrl-name { color: var(--context); }
+
+  /* Tick */
+  .ctrl-tick { border-color: rgba(245,158,11,0.3); background: rgba(245,158,11,0.04); }
+  .ctrl-tick::before { background: var(--tick); }
+  .ctrl-tick .ctrl-name { color: var(--tick); }
+
+  /* Reply */
+  .ctrl-reply { border-color: rgba(244,114,182,0.3); background: rgba(244,114,182,0.04); }
+  .ctrl-reply::before { background: var(--reply); }
+  .ctrl-reply .ctrl-name { color: var(--reply); }
+
+  .ctrl-name {
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .ctrl-endpoint {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .ctrl-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 8px;
+  }
+  .tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: var(--tag-bg);
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+
+  /* Steps list inside tick/reply */
+  .steps {
+    list-style: none;
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .steps li {
+    font-size: 0.72rem;
+    color: var(--muted);
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .step-num {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--tag-bg);
+    border: 1px solid var(--border);
+    display: grid; place-items: center;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  /* Reply checks */
+  .checks {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-top: 8px;
+  }
+  .check-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.7rem;
+  }
+  .check-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .dot-red   { background: #ef4444; box-shadow: 0 0 6px #ef4444; }
+  .dot-amber { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; }
+  .dot-blue  { background: #60a5fa; box-shadow: 0 0 6px #60a5fa; }
+  .dot-pink  { background: #f472b6; box-shadow: 0 0 6px #f472b6; }
+  .check-text { color: var(--muted); }
+  .check-result {
+    margin-left: auto;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    padding: 2px 7px;
+    border-radius: 20px;
+  }
+  .res-end  { background: rgba(239,68,68,0.15);  color: #ef4444;  border: 1px solid rgba(239,68,68,0.3); }
+  .res-send { background: rgba(96,165,250,0.15); color: #60a5fa; border: 1px solid rgba(96,165,250,0.3); }
+  .res-role { background: rgba(244,114,182,0.15);color: #f472b6; border: 1px solid rgba(244,114,182,0.3);}
+
+  /* Arrow between controllers and store */
+  .down-arrow-row {
+    display: flex;
+    justify-content: center;
+    margin: 10px 0;
+  }
+  .down-arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+  .da-line  { width: 2px; height: 20px; background: var(--border); }
+  .da-head  { width: 0; height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 7px solid var(--border); }
+
+  /* ── InMemoryStore ── */
+  .store-box {
+    border: 1.5px solid rgba(96,165,250,0.4);
+    border-radius: 14px;
+    padding: 18px 22px;
+    background: rgba(96,165,250,0.04);
+    margin-top: 14px;
+    box-shadow: 0 0 32px rgba(96,165,250,0.08);
+  }
+  .store-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .store-icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: rgba(96,165,250,0.12);
+    border: 1px solid rgba(96,165,250,0.3);
+    display: grid; place-items: center;
+    font-size: 1rem;
+  }
+  .store-title h3 { font-size: 0.88rem; font-weight: 700; color: var(--store); }
+  .store-title p  { font-size: 0.65rem; color: var(--muted); font-family: 'Space Mono', monospace; }
+  .store-keys {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .key-card {
+    border-radius: 8px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    background: var(--tag-bg);
+  }
+  .key-scope {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+  }
+  .key-example {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    color: var(--muted);
+  }
+  .ks-cat   { color: var(--context); }
+  .ks-mer   { color: var(--tick);    }
+  .ks-cust  { color: var(--meta);    }
+  .ks-trig  { color: var(--judge);   }
+
+  /* ── Data flow section ── */
+  .flow-section {
+    margin-top: 36px;
+    animation: fadeUp 0.6s 0.5s ease both;
+  }
+  .flow-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 12px;
+  }
+  .flow-card {
+    border-radius: 12px;
+    padding: 18px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .flow-card h4 {
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .flow-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+  .flow-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .flow-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+  .flow-arrow {
+    color: var(--border);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    margin-top: -1px;
+    flex-shrink: 0;
+  }
+
+  /* ── Package structure ── */
+  .pkg-section {
+    margin-top: 36px;
+    animation: fadeUp 0.6s 0.6s ease both;
+  }
+  .pkg-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    line-height: 1.9;
+    color: var(--muted);
+  }
+  .pkg-root  { color: var(--text); font-weight: 700; }
+  .pkg-dir   { color: var(--store); }
+  .pkg-ctrl  { color: var(--text); }
+  .pkg-health  { color: var(--health); }
+  .pkg-meta    { color: var(--meta); }
+  .pkg-context { color: var(--context); }
+  .pkg-tick    { color: var(--tick); }
+  .pkg-reply   { color: var(--reply); }
+  .pkg-repo    { color: var(--store); }
+
+  /* ── Animations ── */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  /* Glow pulse on store */
+  @keyframes glow {
+    0%, 100% { box-shadow: 0 0 16px rgba(96,165,250,0.08); }
+    50%       { box-shadow: 0 0 32px rgba(96,165,250,0.22); }
+  }
+  .store-box { animation: glow 3s ease-in-out infinite; }
+
+  @media (max-width: 640px) {
+    .top-controllers { grid-template-columns: 1fr; }
+    .flow-grid        { grid-template-columns: 1fr; }
+    .store-keys       { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>magicpin Bot — Application Architecture</h1>
+    <p>Spring Boot 3 · Java 17 · In-Memory · port 8080</p>
+  </div>
+
+  <!-- Judge -->
+  <div class="section-label">External</div>
+  <div class="judge-box">
+    <div class="judge-icon">⚖️</div>
+    <div>
+      <h3>magicpin Judge Harness</h3>
+      <p>LLM-powered harness · plays merchant · pushes context · scores messages</p>
+    </div>
+    <div class="http-badge">HTTP / JSON</div>
+  </div>
+
+  <!-- Connector -->
+  <div class="connector">
+    <div class="connector-line"></div>
+    <div class="connector-arrow"></div>
+    <div class="connector-label">5 endpoints</div>
+  </div>
+
+  <!-- Spring Boot App -->
+  <div class="section-label">Spring Boot Application</div>
+  <div class="app-container">
+    <div class="app-title">
+      <span class="spring-badge">Spring Boot</span>
+      <h2>com.magicpin.bot</h2>
+      <div class="port-badge">:8080</div>
+    </div>
+
+    <!-- Health + Meta -->
+    <div class="top-controllers">
+      <div class="ctrl ctrl-health">
+        <div class="ctrl-name">HealthController</div>
+        <div class="ctrl-endpoint">GET /v1/healthz</div>
+        <div class="ctrl-tags">
+          <span class="tag">status: ok</span>
+          <span class="tag">contexts_loaded</span>
+          <span class="tag">uptime_seconds</span>
+        </div>
+      </div>
+      <div class="ctrl ctrl-meta">
+        <div class="ctrl-name">MetadataController</div>
+        <div class="ctrl-endpoint">GET /v1/metadata</div>
+        <div class="ctrl-tags">
+          <span class="tag">team_name</span>
+          <span class="tag">model</span>
+          <span class="tag">version</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Context Controller -->
+    <div class="ctrl ctrl-context" style="margin-bottom:14px">
+      <div class="ctrl-name">ContextController</div>
+      <div class="ctrl-endpoint">POST /v1/context</div>
+      <div class="ctrl-tags">
+        <span class="tag">scope: category | merchant | customer | trigger</span>
+        <span class="tag">idempotent by (scope, context_id)</span>
+        <span class="tag">key → "scope:context_id"</span>
+        <span class="tag">writes to InMemoryStore</span>
+      </div>
+    </div>
+
+    <!-- Tick Controller -->
+    <div class="ctrl ctrl-tick" style="margin-bottom:14px">
+      <div class="ctrl-name">TickController</div>
+      <div class="ctrl-endpoint">POST /v1/tick</div>
+      <ul class="steps">
+        <li><span class="step-num">1</span>Parse available_triggers from request body</li>
+        <li><span class="step-num">2</span>Resolve trigger IDs → store.getByKey("trigger:id")</li>
+        <li><span class="step-num">3</span>Loop all merchant contexts from store</li>
+        <li><span class="step-num">4</span>Pull category context → digest title, peer CTR</li>
+        <li><span class="step-num">5</span>Extract identity, signals, metrics per merchant</li>
+        <li><span class="step-num">6</span>selectBestTrigger() → merchant-specific or highest urgency</li>
+        <li><span class="step-num">7</span>buildWhyNow() → trigger-kind opening hook</li>
+        <li><span class="step-num">8</span>generateMessage() → switch(category) template</li>
+        <li><span class="step-num">9</span>Return actions[] with body, cta, rationale</li>
+      </ul>
+      <div class="ctrl-tags" style="margin-top:10px">
+        <span class="tag">restaurants</span>
+        <span class="tag">salons</span>
+        <span class="tag">dentists</span>
+        <span class="tag">gyms</span>
+        <span class="tag">pharmacies</span>
+      </div>
+    </div>
+
+    <!-- Reply Controller -->
+    <div class="ctrl ctrl-reply">
+      <div class="ctrl-name">ReplyController</div>
+      <div class="ctrl-endpoint">POST /v1/reply</div>
+      <div class="checks">
+        <div class="check-row">
+          <div class="check-dot dot-red"></div>
+          <span class="check-text">Check 1 — STOP keyword (highest priority)</span>
+          <span class="check-result res-end">action=end</span>
+        </div>
+        <div class="check-row">
+          <div class="check-dot dot-amber"></div>
+          <span class="check-text">Check 2 — Unified auto-reply (phrase OR repeat)</span>
+          <span class="check-result res-send">send probe → end</span>
+        </div>
+        <div class="check-row">
+          <div class="check-dot dot-pink"></div>
+          <span class="check-text">Check 3 — Role branch</span>
+          <span class="check-result res-role">customer | merchant</span>
+        </div>
+      </div>
+      <div class="ctrl-tags" style="margin-top:10px">
+        <span class="tag">history: convId → [turns]</span>
+        <span class="tag">ConcurrentHashMap</span>
+        <span class="tag">per-role message tracking</span>
+      </div>
+    </div>
+
+    <!-- Arrow to store -->
+    <div class="down-arrow-row">
+      <div class="down-arrow">
+        <div class="da-line"></div>
+        <div class="da-head"></div>
+      </div>
+    </div>
+
+    <!-- InMemoryStore -->
+    <div class="store-box">
+      <div class="store-title">
+        <div class="store-icon">🗄️</div>
+        <div>
+          <h3>InMemoryStore  (@Component · Singleton)</h3>
+          <p>ConcurrentHashMap&lt;String, Map&lt;String,Object&gt;&gt; · shared across all controllers</p>
+        </div>
+      </div>
+      <div class="store-keys">
+        <div class="key-card">
+          <div class="key-scope ks-cat">category</div>
+          <div class="key-example">"category:dentists"<br>"category:salons"</div>
+        </div>
+        <div class="key-card">
+          <div class="key-scope ks-mer">merchant</div>
+          <div class="key-example">"merchant:m_001_drmeera"<br>"merchant:m_005_pizza"</div>
+        </div>
+        <div class="key-card">
+          <div class="key-scope ks-cust">customer</div>
+          <div class="key-example">"customer:c_001_priya"<br>"customer:c_002_rohit"</div>
+        </div>
+        <div class="key-card">
+          <div class="key-scope ks-trig">trigger</div>
+          <div class="key-example">"trigger:trg_research_digest"<br>"trigger:trg_recall_priya"</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /app-container -->
+
+  <!-- Data Flow -->
+  <div class="flow-section">
+    <div class="section-label">Data Flows</div>
+    <div class="flow-grid">
+
+      <div class="flow-card">
+        <h4>
+          <div class="flow-dot" style="background:var(--tick)"></div>
+          Tick Request Flow
+        </h4>
+        <div class="flow-steps">
+          <div class="flow-step"><span class="flow-arrow">→</span>Judge POST /v1/tick with trigger IDs</div>
+          <div class="flow-step"><span class="flow-arrow">→</span>Resolve each ID from store</div>
+          <div class="flow-step"><span class="flow-arrow">→</span>Loop merchants in store</div>
+          <div class="flow-step"><span class="flow-arrow">→</span>Enrich with category digest + peer stats</div>
+          <div class="flow-step"><span class="flow-arrow">→</span>Select best trigger per merchant</div>
+          <div class="flow-step"><span class="flow-arrow">→</span>Generate category-specific message</div>
+          <div class="flow-step"><span class="flow-arrow">→</span>Return actions[] with rationale</div>
+        </div>
+      </div>
+
+      <div class="flow-card">
+        <h4>
+          <div class="flow-dot" style="background:var(--reply)"></div>
+          Reply Request Flow
+        </h4>
+        <div class="flow-steps">
+          <div class="flow-step"><span class="flow-arrow">→</span>Judge POST /v1/reply with message</div>
+          <div class="flow-step"><span class="flow-arrow">→</span>Record turn in history map</div>
+          <div class="flow-step"><span class="flow-arrow">→</span>Check STOP → end immediately</div>
+          <div class="flow-step"><span class="flow-arrow">→</span>Count prior auto-signals (unified)</div>
+          <div class="flow-step"><span class="flow-arrow">→</span>0 signals → probe once (send)</div>
+          <div class="flow-step"><span class="flow-arrow">→</span>1+ signals → end gracefully</div>
+          <div class="flow-step"><span class="flow-arrow">→</span>Route by role → customer / merchant</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Package Structure -->
+  <div class="pkg-section">
+    <div class="section-label">Package Structure</div>
+    <div class="pkg-box">
+<span class="pkg-root">com.magicpin.bot/</span>
+├── <span class="pkg-ctrl">BotApplication.java</span>          <span style="color:#374151">← @SpringBootApplication entry point</span>
+├── <span class="pkg-dir">controller/</span>
+│   ├── <span class="pkg-health">HealthController.java</span>     <span style="color:#374151">← GET /v1/healthz</span>
+│   ├── <span class="pkg-meta">MetadataController.java</span>   <span style="color:#374151">← GET /v1/metadata</span>
+│   ├── <span class="pkg-context">ContextController.java</span>    <span style="color:#374151">← POST /v1/context</span>
+│   ├── <span class="pkg-tick">TickController.java</span>       <span style="color:#374151">← POST /v1/tick  (core composer)</span>
+│   └── <span class="pkg-reply">ReplyController.java</span>      <span style="color:#374151">← POST /v1/reply (conversation)</span>
+└── <span class="pkg-dir">repository/</span>
+    └── <span class="pkg-repo">InMemoryStore.java</span>        <span style="color:#374151">← shared ConcurrentHashMap singleton</span>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+</body>
+</html>
